@@ -1,0 +1,823 @@
+could you add enemies with their individual hps and the explosion should damage them, these enemies should be able to move.
+
+html:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Curved Ammo Throw</title>
+  <style>
+    body {
+      cursor: none;
+      margin: 0;
+      overflow: hidden;
+      height: 100vh;
+    }
+    #custom-cursor {
+      position: fixed;
+      width: 64px;
+      height: 64px;
+      pointer-events: none;
+      z-index: 1000;
+      transform: translate(-50%, -50%);
+    }
+    .ammo {
+      position: fixed;
+      width: 128px;
+      height: 128px;
+      pointer-events: none;
+      z-index: 999;
+      transform-origin: center center;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .explosion {
+      position: fixed;
+      width: 128px;
+      height: 128px;
+      pointer-events: none;
+      z-index: 998;
+      transform: translate(-50%, -50%);
+      animation: fadeOut 0.4s ease-out forwards;
+    }
+    @keyframes fadeOut {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.5);
+      }
+    }
+  </style>
+</head>
+<body>
+  <img
+    id="custom-cursor"
+    src="{{ url_for('static', filename='aim.png') }}"
+    alt="Cursor"
+  />
+
+  <script>
+    const cursor = document.getElementById("custom-cursor");
+
+    document.addEventListener("mousemove", (e) => {
+      cursor.style.left = e.clientX + "px";
+      cursor.style.top = e.clientY + "px";
+    });
+
+    // Quadratic Bezier function
+    function getQuadraticBezierXY(t, startX, startY, cpX, cpY, endX, endY) {
+      const x =
+        Math.pow(1 - t, 2) * startX +
+        2 * (1 - t) * t * cpX +
+        Math.pow(t, 2) * endX;
+      const y =
+        Math.pow(1 - t, 2) * startY +
+        2 * (1 - t) * t * cpY +
+        Math.pow(t, 2) * endY;
+      return { x, y };
+    }
+
+    document.addEventListener("click", (e) => {
+      const ammo = document.createElement("img");
+      ammo.src = "{{ url_for('static', filename='ammo.png') }}";
+      ammo.className = "ammo";
+      document.body.appendChild(ammo);
+
+      // Start pos: bottom right (offset a bit inside the window for "hand")
+      const startX = window.innerWidth - 80; // 80px inside right edge
+      const startY = window.innerHeight - 100; // 100px above bottom edge
+
+      // End pos: mouse click
+      const endX = e.clientX;
+      const endY = e.clientY;
+
+      // Control point for curve: somewhere above the line to make an arc
+      // Adjust control point for different curve shapes
+      const cpX = startX;
+      const cpY = endY - 200; // 200px above mouse Y (curve height)
+
+      // Animation duration
+      const duration = 600; // ms
+
+      let startTime = null;
+
+      // Scale starts big and shrinks to 0.3
+      const startScale = 1.5;
+      const endScale = 0.3;
+
+      function animate(time) {
+        if (!startTime) startTime = time;
+        const elapsed = time - startTime;
+        let t = Math.min(elapsed / duration, 1); // from 0 to 1
+
+        // Get current position on bezier curve
+        const pos = getQuadraticBezierXY(t, startX, startY, cpX, cpY, endX, endY);
+
+        // Update ammo position
+        ammo.style.left = pos.x + "px";
+        ammo.style.top = pos.y + "px";
+
+        // Interpolate scale
+        const scale = startScale + t * (endScale - startScale);
+        ammo.style.transform = translate(-50%, -50%) scale(${scale.toFixed(2)});
+
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          // Animation ended - remove ammo and show explosion
+          ammo.remove();
+
+          const boom = document.createElement("img");
+          boom.src = "{{ url_for('static', filename='boom.png') }}";
+          boom.className = "explosion";
+          boom.style.left = endX + "px";
+          boom.style.top = endY + "px";
+
+          document.body.appendChild(boom);
+
+          setTimeout(() => boom.remove(), 400);
+        }
+      }
+
+      // Set ammo initial pos and scale
+      ammo.style.left = startX + "px";
+      ammo.style.top = startY + "px";
+      ammo.style.transform = translate(-50%, -50%) scale(${startScale});
+
+      requestAnimationFrame(animate);
+    });
+  </script>
+</body>
+</html>
+
+python:
+from flask import Flask, render_template
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return render_template('home.html')
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+result:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Curved Ammo Throw with Enemies</title>
+  <style>
+    body {
+      cursor: none;
+      margin: 0;
+      overflow: hidden;
+      height: 100vh;
+    }
+    #custom-cursor {
+      position: fixed;
+      width: 64px;
+      height: 64px;
+      pointer-events: none;
+      z-index: 1000;
+      transform: translate(-50%, -50%);
+    }
+    .ammo {
+      position: fixed;
+      width: 128px;
+      height: 128px;
+      pointer-events: none;
+      z-index: 999;
+      transform-origin: center center;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .explosion {
+      position: fixed;
+      width: 128px;
+      height: 128px;
+      pointer-events: none;
+      z-index: 998;
+      transform: translate(-50%, -50%);
+      animation: fadeOut 0.4s ease-out forwards;
+    }
+    .enemy {
+      position: fixed;
+      width: 64px;
+      height: 64px;
+      background-image: url("{{ url_for('static', filename='enemy.png') }}");
+      background-size: cover;
+      z-index: 997;
+      pointer-events: none;
+    }
+    @keyframes fadeOut {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.5);
+      }
+    }
+  </style>
+</head>
+<body>
+  <img id="custom-cursor" src="{{ url_for('static', filename='aim.png') }}" alt="Cursor" />
+
+  <script>
+    const cursor = document.getElementById("custom-cursor");
+
+    document.addEventListener("mousemove", (e) => {
+      cursor.style.left = e.clientX + "px";
+      cursor.style.top = e.clientY + "px";
+    });
+
+    const enemies = [];
+
+    function getQuadraticBezierXY(t, startX, startY, cpX, cpY, endX, endY) {
+      const x = Math.pow(1 - t, 2) * startX + 2 * (1 - t) * t * cpX + Math.pow(t, 2) * endX;
+      const y = Math.pow(1 - t, 2) * startY + 2 * (1 - t) * t * cpY + Math.pow(t, 2) * endY;
+      return { x, y };
+    }
+
+    function spawnEnemy() {
+      const enemy = document.createElement("div");
+      enemy.className = "enemy";
+      enemy.style.left = Math.random() * (window.innerWidth - 64) + "px";
+      enemy.style.top = Math.random() * (window.innerHeight - 200) + "px";
+      enemy.hp = 3;
+      document.body.appendChild(enemy);
+      enemies.push(enemy);
+      moveEnemy(enemy);
+    }
+
+    function moveEnemy(enemy) {
+      const move = () => {
+        const x = Math.random() * (window.innerWidth - 64);
+        const y = Math.random() * (window.innerHeight - 200);
+        enemy.style.transition = "left 2s linear, top 2s linear";
+        enemy.style.left = x + "px";
+        enemy.style.top = y + "px";
+        if (enemy.hp > 0) {
+          setTimeout(() => moveEnemy(enemy), 2000);
+        }
+      };
+      move();
+    }
+
+    function checkExplosionDamage(x, y) {
+      const radius = 80;
+      enemies.forEach((enemy, i) => {
+        const rect = enemy.getBoundingClientRect();
+        const ex = rect.left + rect.width / 2;
+        const ey = rect.top + rect.height / 2;
+        const dist = Math.hypot(x - ex, y - ey);
+        if (dist < radius) {
+          enemy.hp -= 1;
+          enemy.style.filter = `brightness(${0.6 + enemy.hp * 0.2})`;
+          if (enemy.hp <= 0) {
+            enemy.remove();
+            enemies.splice(i, 1);
+          }
+        }
+      });
+    }
+
+    document.addEventListener("click", (e) => {
+      const ammo = document.createElement("img");
+      ammo.src = "{{ url_for('static', filename='ammo.png') }}";
+      ammo.className = "ammo";
+      document.body.appendChild(ammo);
+
+      const startX = window.innerWidth - 80;
+      const startY = window.innerHeight - 100;
+      const endX = e.clientX;
+      const endY = e.clientY;
+      const cpX = startX;
+      const cpY = endY - 200;
+      const duration = 600;
+      const startScale = 1.5;
+      const endScale = 0.3;
+
+      let startTime = null;
+
+      function animate(time) {
+        if (!startTime) startTime = time;
+        const elapsed = time - startTime;
+        let t = Math.min(elapsed / duration, 1);
+        const pos = getQuadraticBezierXY(t, startX, startY, cpX, cpY, endX, endY);
+        const scale = startScale + t * (endScale - startScale);
+        ammo.style.left = pos.x + "px";
+        ammo.style.top = pos.y + "px";
+        ammo.style.transform = `translate(-50%, -50%) scale(${scale.toFixed(2)})`;
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          ammo.remove();
+          const boom = document.createElement("img");
+          boom.src = "{{ url_for('static', filename='boom.png') }}";
+          boom.className = "explosion";
+          boom.style.left = endX + "px";
+          boom.style.top = endY + "px";
+          document.body.appendChild(boom);
+          checkExplosionDamage(endX, endY);
+          setTimeout(() => boom.remove(), 400);
+        }
+      }
+
+      ammo.style.left = startX + "px";
+      ammo.style.top = startY + "px";
+      ammo.style.transform = `translate(-50%, -50%) scale(${startScale})`;
+
+      requestAnimationFrame(animate);
+    });
+
+    // Spawn enemies periodically
+    setInterval(() => {
+      if (enemies.length < 10) spawnEnemy();
+    }, 2000);
+  </script>
+</body>
+</html>
+
+
+make it so if i hold down my mouse i can charge up a ammo that becomes bigger and eventually switches to a different image
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Charged Ammo Game</title>
+  <style>
+    body {
+      cursor: none;
+      margin: 0;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    #custom-cursor {
+      position: fixed;
+      width: 64px;
+      height: 64px;
+      pointer-events: none;
+      z-index: 1000;
+      transform: translate(-50%, -50%);
+    }
+
+    .ammo {
+      position: fixed;
+      width: 128px;
+      height: 128px;
+      pointer-events: none;
+      z-index: 999;
+      transform-origin: center center;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .explosion {
+      position: fixed;
+      width: 128px;
+      height: 128px;
+      pointer-events: none;
+      z-index: 998;
+      transform: translate(-50%, -50%);
+      animation: fadeOut 0.4s ease-out forwards;
+    }
+
+    .enemy {
+      position: fixed;
+      width: 64px;
+      height: 64px;
+      background-image: url("{{ url_for('static', filename='enemy.png') }}");
+      background-size: cover;
+      z-index: 997;
+      pointer-events: none;
+    }
+
+    @keyframes fadeOut {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.5);
+      }
+    }
+  </style>
+</head>
+<body>
+  <img id="custom-cursor" src="{{ url_for('static', filename='aim.png') }}" alt="Cursor" />
+
+  <script>
+    const cursor = document.getElementById("custom-cursor");
+
+    document.addEventListener("mousemove", (e) => {
+      cursor.style.left = e.clientX + "px";
+      cursor.style.top = e.clientY + "px";
+    });
+
+    const enemies = [];
+
+    function getQuadraticBezierXY(t, startX, startY, cpX, cpY, endX, endY) {
+      const x = Math.pow(1 - t, 2) * startX + 2 * (1 - t) * t * cpX + Math.pow(t, 2) * endX;
+      const y = Math.pow(1 - t, 2) * startY + 2 * (1 - t) * t * cpY + Math.pow(t, 2) * endY;
+      return { x, y };
+    }
+
+    function spawnEnemy() {
+      const enemy = document.createElement("div");
+      enemy.className = "enemy";
+      enemy.style.left = Math.random() * (window.innerWidth - 64) + "px";
+      enemy.style.top = Math.random() * (window.innerHeight - 200) + "px";
+      enemy.hp = 3;
+      document.body.appendChild(enemy);
+      enemies.push(enemy);
+      moveEnemy(enemy);
+    }
+
+    function moveEnemy(enemy) {
+      const move = () => {
+        const x = Math.random() * (window.innerWidth - 64);
+        const y = Math.random() * (window.innerHeight - 200);
+        enemy.style.transition = "left 2s linear, top 2s linear";
+        enemy.style.left = x + "px";
+        enemy.style.top = y + "px";
+        if (enemy.hp > 0) {
+          setTimeout(() => moveEnemy(enemy), 2000);
+        }
+      };
+      move();
+    }
+
+    function checkExplosionDamage(x, y, isCharged = false) {
+      const radius = isCharged ? 150 : 80;
+      enemies.forEach((enemy, i) => {
+        const rect = enemy.getBoundingClientRect();
+        const ex = rect.left + rect.width / 2;
+        const ey = rect.top + rect.height / 2;
+        const dist = Math.hypot(x - ex, y - ey);
+        if (dist < radius) {
+          enemy.hp -= isCharged ? 2 : 1;
+          enemy.style.filter = `brightness(${0.6 + enemy.hp * 0.2})`;
+          if (enemy.hp <= 0) {
+            enemy.remove();
+            enemies.splice(i, 1);
+          }
+        }
+      });
+    }
+
+    let charging = false;
+    let chargeStart = 0;
+    let chargeScale = 1.5;
+    let chargeInterval = null;
+    let isCharged = false;
+    let chargeAmmo = null;
+
+    document.addEventListener("mousedown", (e) => {
+      charging = true;
+      chargeStart = Date.now();
+      chargeScale = 1.5;
+      isCharged = false;
+
+      chargeAmmo = document.createElement("img");
+      chargeAmmo.src = "{{ url_for('static', filename='ammo.png') }}";
+      chargeAmmo.className = "ammo";
+      chargeAmmo.style.left = (window.innerWidth - 80) + "px";
+      chargeAmmo.style.top = (window.innerHeight - 100) + "px";
+      document.body.appendChild(chargeAmmo);
+
+      chargeInterval = setInterval(() => {
+        const elapsed = Date.now() - chargeStart;
+        chargeScale += 0.02;
+        chargeAmmo.style.transform = `translate(-50%, -50%) scale(${chargeScale.toFixed(2)})`;
+
+        if (!isCharged && elapsed >= 1500) {
+          isCharged = true;
+          chargeAmmo.src = "{{ url_for('static', filename='charged_ammo.png') }}";
+        }
+      }, 50);
+    });
+
+    document.addEventListener("mouseup", (e) => {
+      if (!charging) return;
+      charging = false;
+      clearInterval(chargeInterval);
+
+      const startX = window.innerWidth - 80;
+      const startY = window.innerHeight - 100;
+      const endX = e.clientX;
+      const endY = e.clientY;
+      const cpX = startX;
+      const cpY = endY - 200;
+      const duration = 600;
+
+      const ammo = chargeAmmo;
+      let startTime = null;
+
+      function animate(time) {
+        if (!startTime) startTime = time;
+        const elapsed = time - startTime;
+        let t = Math.min(elapsed / duration, 1);
+        const pos = getQuadraticBezierXY(t, startX, startY, cpX, cpY, endX, endY);
+        const scale = chargeScale + t * (0.3 - chargeScale);
+        ammo.style.left = pos.x + "px";
+        ammo.style.top = pos.y + "px";
+        ammo.style.transform = `translate(-50%, -50%) scale(${scale.toFixed(2)})`;
+
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          ammo.remove();
+          const boom = document.createElement("img");
+          boom.src = "{{ url_for('static', filename='boom.png') }}";
+          boom.className = "explosion";
+          boom.style.left = endX + "px";
+          boom.style.top = endY + "px";
+          document.body.appendChild(boom);
+          checkExplosionDamage(endX, endY, isCharged);
+          setTimeout(() => boom.remove(), 400);
+        }
+      }
+
+      requestAnimationFrame(animate);
+    });
+
+    setInterval(() => {
+      if (enemies.length < 10) spawnEnemy();
+    }, 2000);
+  </script>
+</body>
+</html>
+
+add types of ammo:
+- normal
+- bouncy
+- laser
+
+the normal ammo should maintain what type of attacks are currently in the script
+the bouncy ammo should do another bezier curve towards a random direction while also being able to be charged, the longer the charge, the bouncier and larger it is
+the lazer should just be held down for a constant beam
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Charged Ammo with Multiple Types</title>
+  <style>
+    body {
+      cursor: none;
+      margin: 0;
+      overflow: hidden;
+      height: 100vh;
+      user-select: none;
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+    }
+
+    #ammo-selector {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 2000;
+      display: flex;
+      gap: 10px;
+    }
+
+    .ammo-btn {
+      padding: 8px 12px;
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 4px;
+      cursor: pointer;
+      color: white;
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .ammo-btn.active,
+    .ammo-btn:hover {
+      background: #00ccff;
+      border-color: #00aacc;
+      color: black;
+      font-weight: bold;
+    }
+
+    #custom-cursor {
+      position: fixed;
+      width: 64px;
+      height: 64px;
+      pointer-events: none;
+      z-index: 1000;
+      transform: translate(-50%, -50%);
+      mix-blend-mode: difference;
+    }
+
+    .ammo {
+      position: fixed;
+      width: 128px;
+      height: 128px;
+      pointer-events: none;
+      z-index: 999;
+      transform-origin: center center;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .explosion {
+      position: fixed;
+      width: 128px;
+      height: 128px;
+      pointer-events: none;
+      z-index: 998;
+      transform: translate(-50%, -50%);
+      animation: fadeOut 0.4s ease-out forwards;
+    }
+
+    .enemy {
+      position: fixed;
+      width: 64px;
+      height: 64px;
+      background-image: url("{{ url_for('static', filename='enemy.png') }}");
+      background-size: cover;
+      z-index: 997;
+      pointer-events: none;
+      filter: brightness(1);
+      transition: filter 0.2s ease;
+    }
+
+    .health-bar {
+      position: fixed;
+      width: 64px;
+      height: 6px;
+      background-color: red;
+      border: 1px solid #000;
+      border-radius: 3px;
+      z-index: 1001;
+      pointer-events: none;
+    }
+
+    .health-fill {
+      height: 100%;
+      background-color: limegreen;
+      border-radius: 2px;
+      transition: width 0.2s ease;
+    }
+
+    @keyframes fadeOut {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.5);
+      }
+    }
+
+    /* Laser beam style */
+    #laser-beam {
+      position: fixed;
+      pointer-events: none;
+      height: 4px;
+      background: #0ff;
+      box-shadow: 0 0 8px #0ff;
+      z-index: 1500;
+      transform-origin: 0% 50%;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Ammo selector UI -->
+  <div id="ammo-selector">
+    <button class="ammo-btn active" data-type="normal">Normal</button>
+    <button class="ammo-btn" data-type="bouncy">Bouncy</button>
+    <button class="ammo-btn" data-type="laser">Laser</button>
+  </div>
+
+  <img id="custom-cursor" src="{{ url_for('static', filename='aim.png') }}" alt="Cursor" />
+
+  <script>
+    const cursor = document.getElementById("custom-cursor");
+    const ammoSelector = document.getElementById("ammo-selector");
+    const ammoButtons = ammoSelector.querySelectorAll(".ammo-btn");
+
+    let currentAmmoType = "normal";
+
+    ammoButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        ammoButtons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentAmmoType = btn.dataset.type;
+        // Cleanup laser if switching from laser
+        if (laserBeam) {
+          laserBeam.style.display = "none";
+        }
+      });
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      cursor.style.left = e.clientX + "px";
+      cursor.style.top = e.clientY + "px";
+
+      // Update laser endpoint if active
+      if (laserActive) updateLaserBeam(e.clientX, e.clientY);
+    });
+
+    // Enemies & health bars
+    const enemies = [];
+
+    function getQuadraticBezierXY(t, startX, startY, cpX, cpY, endX, endY) {
+      const x = Math.pow(1 - t, 2) * startX + 2 * (1 - t) * t * cpX + Math.pow(t, 2) * endX;
+      const y = Math.pow(1 - t, 2) * startY + 2 * (1 - t) * t * cpY + Math.pow(t, 2) * endY;
+      return { x, y };
+    }
+
+    function spawnEnemy() {
+      const enemy = document.createElement("div");
+      enemy.className = "enemy";
+      enemy.style.left = Math.random() * (window.innerWidth - 64) + "px";
+      enemy.style.top = Math.random() * (window.innerHeight - 200) + "px";
+      enemy.hp = 3;
+      enemy.maxHp = 3;
+
+      const healthBar = document.createElement("div");
+      healthBar.className = "health-bar";
+      const healthFill = document.createElement("div");
+      healthFill.className = "health-fill";
+      healthFill.style.width = "100%";
+      healthBar.appendChild(healthFill);
+
+      document.body.appendChild(enemy);
+      document.body.appendChild(healthBar);
+
+      enemy.healthBar = healthBar;
+      enemy.healthFill = healthFill;
+
+      enemies.push(enemy);
+      moveEnemy(enemy);
+      updateHealthBarPosition(enemy);
+    }
+
+    function moveEnemy(enemy) {
+      const move = () => {
+        const x = Math.random() * (window.innerWidth - 64);
+        const y = Math.random() * (window.innerHeight - 200);
+        enemy.style.transition = "left 2s linear, top 2s linear";
+        enemy.style.left = x + "px";
+        enemy.style.top = y + "px";
+
+        setTimeout(() => {
+          updateHealthBarPosition(enemy);
+        }, 10);
+
+        if (enemy.hp > 0) {
+          setTimeout(() => moveEnemy(enemy), 2000);
+        }
+      };
+      move();
+    }
+
+    function updateHealthBarPosition(enemy) {
+      if (!enemy.healthBar) return;
+      const rect = enemy.getBoundingClientRect();
+      enemy.healthBar.style.left = rect.left + "px";
+      enemy.healthBar.style.top = rect.top - 10 + "px";
+    }
+
+    function checkExplosionDamage(x, y, chargeRatio) {
+      const minRadius = 80;
+      const maxRadius = 250;
+      const radius = minRadius + (maxRadius - minRadius) * chargeRatio;
+      const minDamage = 1;
+      const maxDamage = 3;
+      const damage = minDamage + (maxDamage - minDamage) * chargeRatio;
+
+      enemies.forEach((enemy, i) => {
+        const rect = enemy.getBoundingClientRect();
+        const ex = rect.left + rect.width / 2;
+        const ey = rect.top + rect.height / 2;
+        const dist = Math.hypot(x - ex, y - ey);
+        if (dist < radius) {
+          enemy.hp -= damage;
+          if (enemy.hp < 0) enemy.hp = 0;
+          enemy.healthFill.style.width = (enemy.hp / enemy.maxHp) * 100 + "%";
+          enemy.style.filter = `brightness(${0.6 + (enemy.hp / enemy.maxHp) * 0.4})`;
+
+          if (enemy.hp <= 0) {
+            enemy.remove();
+            if (enemy.healthBar) enemy.healthBar.remove();
+            enemies.splice(i, 1);
+          }
+        }
+      });
+    }
+
+    function damageEnemyAtPoint(x, y, radius, damage)
