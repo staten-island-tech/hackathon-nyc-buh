@@ -39,10 +39,7 @@
   let playerHp = 10;
   const maxPlayerHp = 10;
 
-  // Replace this with your actual enemy texture URL or path
   const enemyTextureUrl = "{{ url_for('static', filename='enemy.png') }}";
-
-  let enemyTexture = null; // will hold loaded enemy texture
 
   init();
   animate();
@@ -78,12 +75,6 @@
     // Add NYC buildings far in background
     createNYCBackgroundBuildings();
 
-    // Load enemy texture ONCE
-    const loader = new THREE.TextureLoader();
-    loader.load(enemyTextureUrl, (texture) => {
-      enemyTexture = texture;
-    });
-
     // Controls
     document.addEventListener("keydown", (e) => keys[e.key.toLowerCase()] = true);
     document.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
@@ -100,55 +91,55 @@
   }
 
   function createNYCBackgroundBuildings() {
-    const buildingColors = [0x888888, 0xaaaaaa, 0x666666, 0x444444, 0x999999];
-    const glassMaterial = new THREE.MeshPhongMaterial({
-      color: 0x5588cc,
-      transparent: true,
-      opacity: 0.7,
-      shininess: 100,
-      specular: 0xddddff,
-    });
+  const buildingColors = [0x888888, 0xaaaaaa, 0x666666, 0x444444, 0x999999];
+  const glassMaterial = new THREE.MeshPhongMaterial({
+    color: 0x5588cc,
+    transparent: true,
+    opacity: 0.7,
+    shininess: 100,
+    specular: 0xddddff,
+  });
 
-    const blockSize = 5;
-    const citySize = 80; // play area approx from -40 to 40 on X and Z
-    const spacing = 10;
+  const blockSize = 5;
+  const citySize = 80; // play area approx from -40 to 40 on X and Z
+  const spacing = 10;
 
-    const minHeight = 1;
-    const maxHeight = 6;
+  const minHeight = 1;
+  const maxHeight = 6;
 
-    const edgeOffset = 15; // how far buildings sit from gameplay area edges
+  const edgeOffset = 15; // how far buildings sit from gameplay area edges
 
-    // Place buildings along edges of a square ring around baseplate:
-    for (let i = -citySize/2 - edgeOffset; i <= citySize/2 + edgeOffset; i += spacing) {
-      // Front edge (Z = +outer)
-      let height = minHeight + Math.random() * maxHeight;
-      let material = Math.random() < 0.3 ? glassMaterial.clone() : new THREE.MeshLambertMaterial({color: buildingColors[Math.floor(Math.random() * buildingColors.length)]});
-      let building = new THREE.Mesh(new THREE.BoxGeometry(blockSize, height, blockSize), material);
-      building.position.set(i, height / 2, citySize/2 + edgeOffset);
-      scene.add(building);
+  // Place buildings along edges of a square ring around baseplate:
+  for (let i = -citySize/2 - edgeOffset; i <= citySize/2 + edgeOffset; i += spacing) {
+    // Front edge (Z = +outer)
+    let height = minHeight + Math.random() * maxHeight;
+    let material = Math.random() < 0.3 ? glassMaterial.clone() : new THREE.MeshLambertMaterial({color: buildingColors[Math.floor(Math.random() * buildingColors.length)]});
+    let building = new THREE.Mesh(new THREE.BoxGeometry(blockSize, height, blockSize), material);
+    building.position.set(i, height / 2, citySize/2 + edgeOffset);
+    scene.add(building);
 
-      // Back edge (Z = -outer)
-      height = minHeight + Math.random() * maxHeight;
-      material = Math.random() < 0.3 ? glassMaterial.clone() : new THREE.MeshLambertMaterial({color: buildingColors[Math.floor(Math.random() * buildingColors.length)]});
-      building = new THREE.Mesh(new THREE.BoxGeometry(blockSize, height, blockSize), material);
-      building.position.set(i, height / 2, -citySize/2 - edgeOffset);
-      scene.add(building);
+    // Back edge (Z = -outer)
+    height = minHeight + Math.random() * maxHeight;
+    material = Math.random() < 0.3 ? glassMaterial.clone() : new THREE.MeshLambertMaterial({color: buildingColors[Math.floor(Math.random() * buildingColors.length)]});
+    building = new THREE.Mesh(new THREE.BoxGeometry(blockSize, height, blockSize), material);
+    building.position.set(i, height / 2, -citySize/2 - edgeOffset);
+    scene.add(building);
 
-      // Left edge (X = -outer)
-      height = minHeight + Math.random() * maxHeight;
-      material = Math.random() < 0.3 ? glassMaterial.clone() : new THREE.MeshLambertMaterial({color: buildingColors[Math.floor(Math.random() * buildingColors.length)]});
-      building = new THREE.Mesh(new THREE.BoxGeometry(blockSize, height, blockSize), material);
-      building.position.set(-citySize/2 - edgeOffset, height / 2, i);
-      scene.add(building);
+    // Left edge (X = -outer)
+    height = minHeight + Math.random() * maxHeight;
+    material = Math.random() < 0.3 ? glassMaterial.clone() : new THREE.MeshLambertMaterial({color: buildingColors[Math.floor(Math.random() * buildingColors.length)]});
+    building = new THREE.Mesh(new THREE.BoxGeometry(blockSize, height, blockSize), material);
+    building.position.set(-citySize/2 - edgeOffset, height / 2, i);
+    scene.add(building);
 
-      // Right edge (X = +outer)
-      height = minHeight + Math.random() * maxHeight;
-      material = Math.random() < 0.3 ? glassMaterial.clone() : new THREE.MeshLambertMaterial({color: buildingColors[Math.floor(Math.random() * buildingColors.length)]});
-      building = new THREE.Mesh(new THREE.BoxGeometry(blockSize, height, blockSize), material);
-      building.position.set(citySize/2 + edgeOffset, height / 2, i);
-      scene.add(building);
-    }
+    // Right edge (X = +outer)
+    height = minHeight + Math.random() * maxHeight;
+    material = Math.random() < 0.3 ? glassMaterial.clone() : new THREE.MeshLambertMaterial({color: buildingColors[Math.floor(Math.random() * buildingColors.length)]});
+    building = new THREE.Mesh(new THREE.BoxGeometry(blockSize, height, blockSize), material);
+    building.position.set(citySize/2 + edgeOffset, height / 2, i);
+    scene.add(building);
   }
+}
 
 
   function onWindowResize() {
@@ -158,20 +149,21 @@
   }
 
   function spawnEnemy() {
-    if (!enemyTexture) return;  // wait until texture is loaded
-
-    const material = new THREE.SpriteMaterial({ map: enemyTexture });
-    const enemy = new THREE.Sprite(material);
-    enemy.scale.set(1, 1, 1);
-    enemy.position.set(
-      player.position.x + (Math.random() - 0.5) * 40,
-      0.5,
-      player.position.z + (Math.random() - 0.5) * 40
-    );
-    enemy.hp = 3;
-    enemy.maxHp = 3;
-    enemies.push(enemy);
-    scene.add(enemy);
+    const loader = new THREE.TextureLoader();
+    loader.load(enemyTextureUrl, (texture) => {
+      const material = new THREE.SpriteMaterial({ map: texture });
+      const enemy = new THREE.Sprite(material);
+      enemy.scale.set(1, 1, 1);
+      enemy.position.set(
+        player.position.x + (Math.random() - 0.5) * 40,
+        0.5,
+        player.position.z + (Math.random() - 0.5) * 40
+      );
+      enemy.hp = 3;
+      enemy.maxHp = 3;
+      enemies.push(enemy);
+      scene.add(enemy);
+    });
   }
 
   function updatePlayerMovement() {
